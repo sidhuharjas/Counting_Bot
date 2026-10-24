@@ -1,0 +1,14 @@
+# Copy this file to config.properties and fill in your bot token.
+# You can also skip the file entirely and set the DISCORD_TOKEN environment variable.
+
+# Bot token from https://discord.com/developers/applications
+token=PUT_YOUR_BOT_TOKEN_HERE
+
+# Command prefix
+prefix=c!
+
+# SQLite database file
+database=counting.db
+
+# top.gg voting page (replace with your bot's real top.gg URL)
+topgg_url=https://top.gg/bot/000000000000000000/vote
