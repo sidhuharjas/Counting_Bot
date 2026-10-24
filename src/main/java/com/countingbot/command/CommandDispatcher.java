@@ -7,7 +7,6 @@ import com.countingbot.db.Database.GuildConfig;
 import com.countingbot.db.Database.LbEntry;
 import com.countingbot.db.Database.UserGlobal;
 import com.countingbot.db.Database.UserGuild;
-import com.countingbot.db.Database.VoteStatus;
 import com.countingbot.game.MathEvaluator;
 import com.countingbot.util.Format;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -55,7 +54,7 @@ public final class CommandDispatcher {
         try {
             return switch (cmd) {
                 case "help" -> help(event);
-                case "vote" -> vote(event);
+                case "save" -> save(event);
                 case "calc" -> calc(event, body);
                 case "stats" -> stats(event);
                 case "cs" -> leaderboard(event, args, "cs");
@@ -124,7 +123,7 @@ public final class CommandDispatcher {
                 • Break the count without a save → the count resets to **1**.
 
                 **Saves**
-                • `{p}vote` — earn saves (0.5 per vote, max 3).
+                • `{p}save` — trade **{c} points** for 1 save (max 3).
                 • A save is spent automatically when someone ruins the count, so the count survives.
 
                 **User commands** (`?` = optional)
@@ -136,7 +135,7 @@ public final class CommandDispatcher {
                 • `{p}user ?@user` — a user's stats
                 • `{p}server` — this server's stats
                 • `{p}calc <expr>` — evaluate maths (e.g. `2^7+1`)
-                • `{p}vote` — vote for saves
+                • `{p}save` — buy a save with your points
                 • `{p}donatesave` — donate 1 save to the server bank (adds 0.2)
                 • `{p}transfersave @user` — gift a save (0.5 tax)
                 • `{p}stats` — bot statistics
@@ -149,7 +148,7 @@ public final class CommandDispatcher {
                 • `{p}numbersonly on|off` — any non-number message ruins the count
                 • `{p}language <code>` — bot language (English for now)
                 • `{p}givesave @user ?amount` — grant saves
-                """.replace("{p}", p);
+                """.replace("{p}", p).replace("{c}", Format.points(config.saveCost()));
 
         return replyEmbed(event, EmbedCreateSpec.builder()
                 .title("📖 counting — help")
@@ -159,37 +158,23 @@ public final class CommandDispatcher {
                 .build());
     }
 
-    private Mono<Void> vote(MessageCreateEvent event) {
+    private Mono<Void> save(MessageCreateEvent event) {
         long userId = authorId(event);
-        VoteStatus status = db.claimVote(userId);
-        String url = config.topggUrl();
-
-        StringBuilder desc = new StringBuilder();
-        desc.append("Vote on top.gg to earn **").append(Format.saves(Database.VOTE_AMOUNT))
-                .append("** saves.\n");
-        desc.append("You currently have **").append(Format.saves(status.saves()))
-                .append('/').append(Format.saves(Database.MAX_SAVES)).append("** saves.\n");
-
-        if (status.granted()) {
-            desc.append("✅ Vote counted! **+").append(Format.saves(Database.VOTE_AMOUNT))
-                    .append(" saves.** You can vote again in ")
-                    .append(Format.cooldown(status.nextInMs())).append(".\n")
-                    .append("👉 [Vote here](").append(url).append(')');
-        } else if (status.atCap() && status.nextInMs() == 0) {
-            desc.append("⚠️ You're maxed out at **").append(Format.saves(Database.MAX_SAVES))
-                    .append("** saves — spend some first!");
-        } else {
-            desc.append("❌ You have already voted. You can vote again in ")
-                    .append(Format.cooldown(status.nextInMs())).append(".\n")
-                    .append("👉 [Vote here](").append(url).append(')');
-        }
-
-        return replyEmbed(event, EmbedCreateSpec.builder()
-                .title("🗳️ Vote for counting to earn saves")
-                .description(desc.toString())
-                .color(status.granted() ? Color.of(0x57F287) : Color.of(0xFEE75C))
-                .footer("Saves protect the count when someone ruins it.", null)
-                .build());
+        Long guildId = event.getGuildId().map(id -> id.asLong()).orElse(null);
+        double cost = config.saveCost();
+        Database.BuyResult result = db.buySave(userId, guildId, cost);
+        return switch (result) {
+            case BOUGHT -> reply(event, "✅ Traded **" + Format.points(cost)
+                    + "** points for **1 save**! You now have **"
+                    + Format.saves(db.getSaves(userId)) + "/" + Format.saves(Database.MAX_SAVES)
+                    + "** saves.");
+            case AT_CAP -> reply(event, "⚠️ You're maxed at **"
+                    + Format.saves(Database.MAX_SAVES)
+                    + "** saves — use one (or donate one) before buying more.");
+            case NO_POINTS -> reply(event, "❌ A save costs **" + Format.points(cost)
+                    + "** points and you only have **" + Format.points(db.getUserGlobal(userId).points())
+                    + "**. Count right, be funny, earn points!");
+        };
     }
 
     private Mono<Void> calc(MessageCreateEvent event, String body) {
@@ -349,7 +334,7 @@ public final class CommandDispatcher {
                         + Format.saves(bank) + "** (each save adds 0.2).");
             }
             return reply(event, "You need at least **1 save** to donate (you have **"
-                    + Format.saves(db.getSaves(userId)) + "**). Use `" + config.prefix() + "vote` to earn some.");
+                    + Format.saves(db.getSaves(userId)) + "**). Use `" + config.prefix() + "save` to buy one with points.");
         });
     }
 

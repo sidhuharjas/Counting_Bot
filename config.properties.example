@@ -10,5 +10,5 @@ prefix=c!
 # SQLite database file
 database=counting.db
 
-# top.gg voting page (replace with your bot's real top.gg URL)
-topgg_url=https://top.gg/bot/000000000000000000/vote
+# Points traded for one save with c!save
+save_cost=10

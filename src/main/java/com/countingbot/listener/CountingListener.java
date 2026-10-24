@@ -179,8 +179,8 @@ public final class CountingListener {
                 .append(Format.points(db.getUserGlobal(userId).points()))
                 .append("**).");
         if (!usedUserSave && !saveLine.contains("guild save bank")) {
-            text.append("\nVote with ").append(config.prefix())
-                    .append("vote to earn saves so you can keep counting next time.");
+            text.append("\nUse ").append(config.prefix())
+                    .append("save to buy a save with your points so the count survives next time.");
         }
 
         Mono<Void> send = message.getChannel()

@@ -20,14 +20,14 @@ Count up together, one number per person, no repeats. Land a number → **+1 poi
 - Points are tracked globally and per server, with run/high/total scoreboards
 
 **Saves** (protect the count)
-- `c!vote` grants **+0.5 saves** (12-hour cooldown, max 3) — link points at your top.gg page
-- When someone ruins the count, a save is spent automatically (user save first, then the server save bank) and the count survives; with no saves it resets to **1**
+- `c!save` — **trade your own points for a save** (default 10 points → 1 save, max 3, configurable with `save_cost`)
+- When someone ruins the count, a save is spent automatically (user save first, then the server save bank) and the count survives; with no saves it resets to **1** — the ruiner pays in points either way (−2)
 - `c!donatesave` — donate 1 save to the server bank (+0.2)
 - `c!transfersave @user` — gift a save (0.5 tax)
 
 **Leaderboards & stats**
 - `c!cs` current run scores · `c!lb` high scores · `c!tlb` totals · `c!ulb` global points · `c!slb` server points (all paginated)
-- `c!user [@user]`, `c!server`, `c!stats`, `c!calc`, `c!vote`, `c!help`, `c!ping`
+- `c!user [@user]`, `c!server`, `c!stats`, `c!calc`, `c!save`, `c!help`, `c!ping`
 
 **Admin commands** (need Administrator)
 - `c!channel [#channel|off]` — set/clear counting channel
@@ -72,7 +72,7 @@ c!channel
 
 ## Notes
 - **Prefix** is `c!` (change with `prefix=` in `config.properties`).
-- **top.gg voting** is wired as a 12-hour self-serve cooldown with your vote URL — swap in the real top.gg API when you have a bot listing (the integration point is `Database.claimVote`).
+- **Saves are bought, not voted for**: points are the only currency — count well, land a funny message, get rated, then trade points for saves with `c!save`.
 - Everything lives in one jar; states survive restarts.
 - Missing something? Open an issue or PR — the codebase is deliberately plain Java so the community can extend it.
 

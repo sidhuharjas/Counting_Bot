@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
-public record Config(String token, String prefix, String database, String topggUrl) {
+public record Config(String token, String prefix, String database, double saveCost) {
 
     public static Config load() throws IOException {
         Properties props = new Properties();
@@ -20,11 +20,20 @@ public record Config(String token, String prefix, String database, String topggU
         if (token == null || token.isBlank()) {
             token = props.getProperty("token", "");
         }
+        double saveCost;
+        try {
+            saveCost = Double.parseDouble(props.getProperty("save_cost", "10").trim());
+        } catch (NumberFormatException e) {
+            saveCost = 10;
+        }
+        if (saveCost < 0) {
+            saveCost = 0;
+        }
         return new Config(
                 token.trim(),
                 props.getProperty("prefix", "c!").trim(),
                 props.getProperty("database", "counting.db").trim(),
-                props.getProperty("topgg_url", "https://top.gg/").trim()
+                saveCost
         );
     }
 }

@@ -7,7 +7,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +19,7 @@ public final class Database implements AutoCloseable {
     }
 
     public record UserGlobal(long userId, double saves, double points, int totalCorrect,
-                             double funnyPoints, long lastVoteClaim) {
+                             double funnyPoints) {
     }
 
     public record UserGuild(long userId, long guildId, double guildPoints, double runPoints,
@@ -30,12 +29,11 @@ public final class Database implements AutoCloseable {
     public record LbEntry(long userId, double value) {
     }
 
-    public record VoteStatus(boolean granted, boolean atCap, long nextInMs, double saves) {
+    public enum BuyResult {
+        BOUGHT, AT_CAP, NO_POINTS
     }
 
     public static final double MAX_SAVES = 3.0;
-    public static final double VOTE_AMOUNT = 0.5;
-    private static final long VOTE_COOLDOWN_MS = Duration.ofHours(12).toMillis();
 
     private final Connection conn;
 
@@ -64,8 +62,7 @@ public final class Database implements AutoCloseable {
                         saves           REAL NOT NULL DEFAULT 0,
                         points          REAL NOT NULL DEFAULT 0,
                         total_correct   INTEGER NOT NULL DEFAULT 0,
-                        funny_points    REAL NOT NULL DEFAULT 0,
-                        last_vote_claim INTEGER NOT NULL DEFAULT 0
+                        funny_points    REAL NOT NULL DEFAULT 0
                     )""");
             st.execute("""
                     CREATE TABLE IF NOT EXISTS user_guild (
@@ -312,25 +309,17 @@ public final class Database implements AutoCloseable {
         }
     }
 
-    public synchronized VoteStatus claimVote(long userId) {
-        try {
-            ensureUser(userId);
-            UserGlobal user = getUserGlobal(userId);
-            long now = System.currentTimeMillis();
-            long since = now - user.lastVoteClaim();
-            if (user.lastVoteClaim() > 0 && since < VOTE_COOLDOWN_MS) {
-                return new VoteStatus(false, user.saves() >= MAX_SAVES, VOTE_COOLDOWN_MS - since, user.saves());
-            }
-            if (user.saves() >= MAX_SAVES) {
-                return new VoteStatus(false, true, 0, user.saves());
-            }
-            double newSaves = Math.min(MAX_SAVES, user.saves() + VOTE_AMOUNT);
-            update("UPDATE user_global SET saves = ?, last_vote_claim = ? WHERE user_id = ?",
-                    newSaves, now, id(userId));
-            return new VoteStatus(true, false, VOTE_COOLDOWN_MS, newSaves);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+    public synchronized BuyResult buySave(long userId, Long guildId, double cost) {
+        UserGlobal user = getUserGlobal(userId);
+        if (user.saves() >= MAX_SAVES) {
+            return BuyResult.AT_CAP;
         }
+        if (user.points() < cost) {
+            return BuyResult.NO_POINTS;
+        }
+        addPoints(userId, guildId, -cost, false);
+        addSaves(userId, 1);
+        return BuyResult.BOUGHT;
     }
 
     public synchronized UserGlobal getUserGlobal(long userId) {
@@ -345,8 +334,7 @@ public final class Database implements AutoCloseable {
                             rs.getDouble("saves"),
                             rs.getDouble("points"),
                             rs.getInt("total_correct"),
-                            rs.getDouble("funny_points"),
-                            rs.getLong("last_vote_claim")
+                            rs.getDouble("funny_points")
                     );
                 }
             }
