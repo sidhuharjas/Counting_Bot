@@ -10,7 +10,6 @@ import com.countingbot.game.MathEvaluator;
 import com.countingbot.util.Format;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.emoji.Emoji;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -92,7 +91,7 @@ public final class CountingListener {
                 String mention = message.getAuthor().map(User::getMention).orElse("");
                 return message.getChannel()
                         .flatMap(ch -> ch.createMessage(
-                                "⚠️ " + mention + " Wait for someone else to send " + expected + "."))
+                                mention + " wait for someone else to send " + expected + "."))
                         .then();
             }
 
@@ -120,18 +119,15 @@ public final class CountingListener {
 
         StringBuilder text = new StringBuilder();
         if (jokeCounter > 0 && jokeBonus > 0) {
-            text.append("😂 <@").append(jokeCounter).append(">'s joke scored **+")
-                    .append(Format.points(jokeBonus)).append("** points!\n");
+            text.append("<@").append(jokeCounter).append(">'s joke got rated **+")
+                    .append(Format.points(jokeBonus)).append("** points.\n");
         }
 
         if (parse.funny()) {
             funny.register(message.getId().asLong(), guildId, userId);
             String mention = message.getAuthor().map(User::getMention).orElse("");
-            text.append("🎭 ").append(mention)
-                    .append(" counted with style! React 1️⃣–5️⃣ on that message to rate the joke — up to **+5** points!\n");
-            message.addReaction(Emoji.unicode("🎭"))
-                    .onErrorResume(e -> Mono.empty())
-                    .subscribe();
+            text.append(mention)
+                    .append(" added something funny to the count. React with 1 to 5 on their message to rate it, for up to **+5** extra points.\n");
         }
 
         String milestone = FailMessages.milestone(expected);
@@ -142,7 +138,7 @@ public final class CountingListener {
         if (text.isEmpty()) {
             return Mono.empty();
         }
-        text.append("➡️ Next number is **").append(expected + 1).append("**.");
+        text.append("Next number is **").append(expected + 1).append("**.");
         return message.getChannel()
                 .flatMap(ch -> ch.createMessage(text.toString().trim()))
                 .then();
@@ -160,25 +156,27 @@ public final class CountingListener {
         String roast = FailMessages.random(mention, typed, expected);
         boolean usedUserSave = db.consumeUserSave(userId);
         String saveLine;
+        boolean reset = false;
         if (usedUserSave) {
-            saveLine = "💾 A save was used (you have " + Format.saves(db.getSaves(userId))
+            saveLine = "A save was used (you have " + Format.saves(db.getSaves(userId))
                     + " left). Next number is still **" + expected + "**.";
             db.setLastUser(guildId, userId);
         } else if (db.consumeGuildSave(guildId)) {
-            saveLine = "🏰 The guild save bank covered it! Next number is still **" + expected + "**.";
+            saveLine = "The server save bank covered it. Next number is still **" + expected + "**.";
             db.setLastUser(guildId, userId);
         } else {
+            reset = true;
             db.resetCount(guildId);
-            saveLine = "💥 Count reset from **" + at + "**. Next number is **1**.";
+            saveLine = "Count reset from **" + at + "**. Next number is **1**.";
         }
 
         db.addPoints(userId, guildId, -2, false);
 
         StringBuilder text = new StringBuilder(roast).append('\n').append(saveLine)
-                .append("\n🔻 −2 points (you now have **")
+                .append("\n-2 points (you now have **")
                 .append(Format.points(db.getUserGlobal(userId).points()))
                 .append("**).");
-        if (!usedUserSave && !saveLine.contains("guild save bank")) {
+        if (reset) {
             text.append("\nUse ").append(config.prefix())
                     .append("save to buy a save with your points so the count survives next time.");
         }

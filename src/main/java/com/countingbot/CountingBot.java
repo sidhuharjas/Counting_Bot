@@ -49,7 +49,7 @@ public final class CountingBot {
                 .block();
 
         client.on(ReadyEvent.class)
-                .subscribe(ready -> log.info("Logged in as {} — counting is live!",
+                .subscribe(ready -> log.info("Logged in as {}. Counting is live.",
                         ready.getSelf().getUsername()));
 
         counting.register(client);

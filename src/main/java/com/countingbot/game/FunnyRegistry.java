@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+// Tracks pending funny-message ratings: who counted the joke, what everyone rated it,
+// and the bonus points owed (applied as soon as each reaction comes in).
 public final class FunnyRegistry {
 
     public record Completed(long counterId, double bonus) {

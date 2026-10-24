@@ -55,9 +55,10 @@ public final class ReactionListener {
                 .then();
     }
 
+    // Keycap number reactions look like "1" + U+20E3; the variation selector (U+FE0F) is optional.
     static Integer keycapRating(String raw) {
-        String s = raw.replace("\ufe0f", "");
-        if (s.length() == 2 && s.charAt(1) == '\u20e3' && s.charAt(0) >= '1' && s.charAt(0) <= '5') {
+        String s = raw.replace("️", "");
+        if (s.length() == 2 && s.charAt(1) == '⃣' && s.charAt(0) >= '1' && s.charAt(0) <= '5') {
             return s.charAt(0) - '0';
         }
         return null;

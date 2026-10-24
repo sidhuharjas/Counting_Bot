@@ -66,7 +66,7 @@ public final class CommandDispatcher {
                 case "server" -> server(event);
                 case "donatesave" -> donateSave(event);
                 case "transfersave" -> transferSave(event, args);
-                case "ping" -> reply(event, "🏓 Pong! Counting is alive.");
+                case "ping" -> reply(event, "Pong. The bot is up.");
                 case "channel" -> admin(event, args, this::channelCommand);
                 case "failrole" -> admin(event, args, this::failRoleCommand);
                 case "disablemaths" -> admin(event, args, this::disableMathsCommand);
@@ -107,54 +107,53 @@ public final class CommandDispatcher {
         return Mono.just(guildId.get().asLong());
     }
 
-    // ---------- user commands ----------
+    // user commands (no special permission)
 
     private Mono<Void> help(MessageCreateEvent event) {
         String p = config.prefix();
         String desc = """
                 **Setup**
-                Create (or pick) a counting channel and type `{p}channel` there with Administrator permission.
-                Start counting from **1**. One person can't count two numbers in a row.
+                Type `{p}channel` in your counting channel (needs Administrator). Count from **1**.
+                One person can't count two numbers in a row.
 
-                **Counting rules & points**
-                • Each correct number = **+1 point**.
-                • Post a number *with something funny* → everyone rates it 1️⃣–5️⃣ for up to **+5 bonus points**.
-                • Wrong number = funny roast **and −2 points**.
-                • Break the count without a save → the count resets to **1**.
+                **How points work**
+                • Correct number = **+1 point**.
+                • Add something funny (extra text or a maths expression) and everyone rates it 1 to 5, for up to **+5** extra points.
+                • Wrong number = a roast and **-2 points**.
+                • Break the count with no saves left = count resets to **1**.
 
                 **Saves**
-                • `{p}save` — trade **{c} points** for 1 save (max 3).
+                • `{p}save` trades **{c} points** for 1 save (max 3).
                 • A save is spent automatically when someone ruins the count, so the count survives.
 
                 **User commands** (`?` = optional)
-                • `{p}cs ?page` — current run scores
-                • `{p}lb ?page` — top high scores (biggest number counted)
-                • `{p}tlb ?page` — top total scores (counts landed)
-                • `{p}ulb ?page` — top users by points (global)
-                • `{p}slb ?page` — top users in this server
-                • `{p}user ?@user` — a user's stats
-                • `{p}server` — this server's stats
-                • `{p}calc <expr>` — evaluate maths (e.g. `2^7+1`)
-                • `{p}save` — buy a save with your points
-                • `{p}donatesave` — donate 1 save to the server bank (adds 0.2)
-                • `{p}transfersave @user` — gift a save (0.5 tax)
-                • `{p}stats` — bot statistics
-                • `{p}ping` — health check
+                • `{p}cs ?page` - current run scores
+                • `{p}lb ?page` - top high scores (biggest number counted)
+                • `{p}tlb ?page` - top total scores (counts landed)
+                • `{p}ulb ?page` - top users by points (global)
+                • `{p}slb ?page` - top users in this server
+                • `{p}user ?@user` - a user's stats
+                • `{p}server` - this server's stats
+                • `{p}calc <expr>` - evaluate maths (e.g. `2^7+1`)
+                • `{p}save` - buy a save with your points
+                • `{p}donatesave` - donate 1 save to the server bank (adds 0.2)
+                • `{p}transfersave @user` - gift a save (0.5 tax)
+                • `{p}stats` - bot statistics
+                • `{p}ping` - health check
 
                 **Admin commands** (Administrator)
-                • `{p}channel ?#channel|off` — set/clear the counting channel
-                • `{p}failrole @role ?seconds` — role given on a ruined count (bare = off)
-                • `{p}disablemaths on|off` — block maths like `1+1`
-                • `{p}numbersonly on|off` — any non-number message ruins the count
-                • `{p}language <code>` — bot language (English for now)
-                • `{p}givesave @user ?amount` — grant saves
+                • `{p}channel ?#channel|off` - set or clear the counting channel
+                • `{p}failrole @role ?seconds` - role given on a ruined count (bare = off)
+                • `{p}disablemaths on|off` - block maths like `1+1`
+                • `{p}numbersonly on|off` - any non-number message ruins the count
+                • `{p}language <code>` - bot language (English for now)
+                • `{p}givesave @user ?amount` - grant saves
                 """.replace("{p}", p).replace("{c}", Format.points(config.saveCost()));
 
         return replyEmbed(event, EmbedCreateSpec.builder()
-                .title("📖 counting — help")
+                .title("counting help")
                 .description(desc)
                 .color(Color.of(0x5865F2))
-                .footer("Join our Discord for questions • Invite the bot to your server", null)
                 .build());
     }
 
@@ -164,16 +163,16 @@ public final class CommandDispatcher {
         double cost = config.saveCost();
         Database.BuyResult result = db.buySave(userId, guildId, cost);
         return switch (result) {
-            case BOUGHT -> reply(event, "✅ Traded **" + Format.points(cost)
-                    + "** points for **1 save**! You now have **"
+            case BOUGHT -> reply(event, "Traded **" + Format.points(cost)
+                    + "** points for **1 save**. You now have **"
                     + Format.saves(db.getSaves(userId)) + "/" + Format.saves(Database.MAX_SAVES)
                     + "** saves.");
-            case AT_CAP -> reply(event, "⚠️ You're maxed at **"
+            case AT_CAP -> reply(event, "You're maxed at **"
                     + Format.saves(Database.MAX_SAVES)
-                    + "** saves — use one (or donate one) before buying more.");
-            case NO_POINTS -> reply(event, "❌ A save costs **" + Format.points(cost)
+                    + "** saves. Use one or donate one before buying more.");
+            case NO_POINTS -> reply(event, "A save costs **" + Format.points(cost)
                     + "** points and you only have **" + Format.points(db.getUserGlobal(userId).points())
-                    + "**. Count right, be funny, earn points!");
+                    + "**. Count correctly and get jokes rated to earn more.");
         };
     }
 
@@ -184,12 +183,12 @@ public final class CommandDispatcher {
         }
         Double value = MathEvaluator.evaluate(expr);
         if (value == null) {
-            return reply(event, "❌ `" + expr + "` isn't a valid expression. Supported: `+ - * / % ^ ( )`");
+            return reply(event, "`" + expr + "` isn't a valid expression. Supported: `+ - * / % ^ ( )`");
         }
         String rendered = value == Math.rint(value)
                 ? String.valueOf((long) (double) value)
                 : String.valueOf(value);
-        return reply(event, "🧮 `" + expr + "` = **" + rendered + "**");
+        return reply(event, "`" + expr + "` = **" + rendered + "**");
     }
 
     private Mono<Void> stats(MessageCreateEvent event) {
@@ -198,7 +197,7 @@ public final class CommandDispatcher {
         long counts = db.sumTotalCorrect();
         long uptime = System.currentTimeMillis() - CountingBot.startedAt;
         return replyEmbed(event, EmbedCreateSpec.builder()
-                .title("📊 counting — statistics")
+                .title("counting stats")
                 .addField("Guilds", Format.commas(guilds), true)
                 .addField("Users", Format.commas(users), true)
                 .addField("Counts landed", Format.commas(counts), true)
@@ -223,32 +222,32 @@ public final class CommandDispatcher {
         switch (type) {
             case "cs" -> {
                 if (guildId.isEmpty()) return reply(event, "Run this in a server.");
-                title = "🏁 Current scores";
+                title = "Current scores";
                 valueSuffix = " pts this run";
                 color = Color.of(0x57F287);
                 entries = db.lbCurrentRun(guildId.get(), PAGE_SIZE, offset);
             }
             case "lb" -> {
-                title = "🏆 High scores";
+                title = "High scores";
                 valueSuffix = " highest counted";
                 color = Color.of(0xFEE75C);
                 entries = db.lbHigh(PAGE_SIZE, offset);
             }
             case "tlb" -> {
-                title = "📈 Total scores";
+                title = "Total scores";
                 valueSuffix = " counts";
                 color = Color.of(0x5865F2);
                 entries = db.lbTotal(PAGE_SIZE, offset);
             }
             case "ulb" -> {
-                title = "👑 Top users";
+                title = "Top users";
                 valueSuffix = " pts";
                 color = Color.of(0xEB459E);
                 entries = db.lbPoints(PAGE_SIZE, offset);
             }
             case "slb" -> {
                 if (guildId.isEmpty()) return reply(event, "Run this in a server.");
-                title = "🏠 Top users in this server";
+                title = "Top users in this server";
                 valueSuffix = " pts";
                 color = Color.of(0x5865F2);
                 entries = db.lbGuildPoints(guildId.get(), PAGE_SIZE, offset);
@@ -259,14 +258,14 @@ public final class CommandDispatcher {
         }
 
         if (entries.isEmpty()) {
-            return reply(event, "No scores on page " + page + " yet. Start counting!");
+            return reply(event, "No scores on page " + page + " yet.");
         }
 
         StringBuilder desc = new StringBuilder();
         int rank = offset + 1;
         for (LbEntry entry : entries) {
             desc.append('`').append(rank++).append(".` <@").append(entry.userId())
-                    .append("> — **").append(Format.points(entry.value()))
+                    .append("> - **").append(Format.points(entry.value()))
                     .append("**").append(valueSuffix).append('\n');
         }
 
@@ -274,7 +273,7 @@ public final class CommandDispatcher {
                 .title(title)
                 .description(desc.toString())
                 .color(color)
-                .footer("Page " + page + " • " + prefix + type + " " + (page + 1) + " for next page", null)
+                .footer("Page " + page + " - " + prefix + type + " " + (page + 1) + " for next page", null)
                 .build());
     }
 
@@ -284,7 +283,7 @@ public final class CommandDispatcher {
         int high = db.getHighScore(targetId);
 
         EmbedCreateSpec.Builder embed = EmbedCreateSpec.builder()
-                .title("👤 User stats")
+                .title("User stats")
                 .description("Stats for <@" + targetId + ">")
                 .color(Color.of(0x5865F2))
                 .addField("Points", Format.points(global.points()), true)
@@ -311,7 +310,7 @@ public final class CommandDispatcher {
                     : "<#" + cfg.channelId() + ">";
             int next = cfg.currentCount() + 1;
             return replyEmbed(event, EmbedCreateSpec.builder()
-                    .title("🏠 Server stats")
+                    .title("Server stats")
                     .color(Color.of(0x5865F2))
                     .addField("Counting channel", channel, true)
                     .addField("Next number", Format.commas(next), true)
@@ -330,8 +329,8 @@ public final class CommandDispatcher {
             long userId = authorId(event);
             if (db.donateSave(userId, guildId)) {
                 double bank = db.getGuildSaves(guildId);
-                return reply(event, "❤️ Thank you! Donated **1 save** — the server save bank now has **"
-                        + Format.saves(bank) + "** (each save adds 0.2).");
+                return reply(event, "Donated **1 save**. The server save bank now has **"
+                        + Format.saves(bank) + "** (each donate adds 0.2).");
             }
             return reply(event, "You need at least **1 save** to donate (you have **"
                     + Format.saves(db.getSaves(userId)) + "**). Use `" + config.prefix() + "save` to buy one with points.");
@@ -349,37 +348,37 @@ public final class CommandDispatcher {
             return reply(event, "You can't transfer a save to yourself.");
         }
         if (db.transferSave(from, to)) {
-            return reply(event, "🎁 Sent a save to <@" + to + "> (0.5 tax — they received 0.5).");
+            return reply(event, "Sent a save to <@" + to + "> (0.5 tax, they received 0.5).");
         }
         return reply(event, "You need at least **1 save** to transfer (you have **"
                 + Format.saves(db.getSaves(from)) + "**).");
     }
 
-    // ---------- admin commands ----------
+    // admin commands (Administrator permission required)
 
     private Mono<Void> channelCommand(MessageCreateEvent event, String[] args) {
         return requireGuild(event).flatMap(guildId -> {
             if (args.length == 0) {
                 long channelId = event.getMessage().getChannelId().asLong();
                 db.setChannel(guildId, channelId);
-                return reply(event, "✅ Counting channel set to <#" + channelId
-                        + ">. Start counting at **1**!");
+                return reply(event, "Counting channel set to <#" + channelId
+                        + ">. Start at **1**.");
             }
             String arg = args[0];
             if (arg.equalsIgnoreCase("off") || arg.equalsIgnoreCase("clear") || arg.equalsIgnoreCase("disable")) {
                 db.setChannel(guildId, null);
-                return reply(event, "✅ Counting channel cleared — I'll listen in a channel named #counting again.");
+                return reply(event, "Counting channel cleared. I'll listen in a channel named #counting again.");
             }
             Matcher m = CHANNEL_MENTION.matcher(arg);
             if (m.matches()) {
                 long channelId = Long.parseLong(m.group(1));
                 db.setChannel(guildId, channelId);
-                return reply(event, "✅ Counting channel set to <#" + channelId + ">.");
+                return reply(event, "Counting channel set to <#" + channelId + ">.");
             }
             if (RAW_ID.matcher(arg).matches()) {
                 long channelId = Long.parseLong(arg);
                 db.setChannel(guildId, channelId);
-                return reply(event, "✅ Counting channel set to <#" + channelId + ">.");
+                return reply(event, "Counting channel set to <#" + channelId + ">.");
             }
             return reply(event, "Usage: type `" + config.prefix() + "channel` in the counting channel, or `"
                     + config.prefix() + "channel off`.");
@@ -390,7 +389,7 @@ public final class CommandDispatcher {
         return requireGuild(event).flatMap(guildId -> {
             if (args.length == 0) {
                 db.setFailRole(guildId, null, 0);
-                return reply(event, "✅ Fail role disabled.");
+                return reply(event, "Fail role disabled.");
             }
             Matcher m = ROLE_MENTION.matcher(args[0]);
             if (!m.matches() && !RAW_ID.matcher(args[0]).matches()) {
@@ -409,7 +408,7 @@ public final class CommandDispatcher {
             String timeoutText = timeout == 0
                     ? "permanent until removed"
                     : "removed after " + Format.cooldown(timeout * 1000L);
-            return reply(event, "✅ Fail role set to <@&" + roleId + "> (" + timeoutText + ").");
+            return reply(event, "Fail role set to <@&" + roleId + "> (" + timeoutText + ").");
         });
     }
 
@@ -429,7 +428,7 @@ public final class CommandDispatcher {
                 return reply(event, "Usage: `" + config.prefix() + name + " on|off`");
             }
             setter.accept(guildId, value);
-            return reply(event, "✅ " + label + " is now **" + (value ? "on" : "off") + "**.");
+            return reply(event, label + " is now **" + (value ? "on" : "off") + "**.");
         });
     }
 
@@ -449,7 +448,7 @@ public final class CommandDispatcher {
             }
             String code = args[0].toLowerCase(Locale.ROOT);
             db.setLanguage(guildId, code);
-            return reply(event, "✅ Language set to `" + code + "`. (English is the only translation for now — contributions welcome!)");
+            return reply(event, "Language set to `" + code + "`. English is the only translation for now.");
         });
     }
 
@@ -463,18 +462,18 @@ public final class CommandDispatcher {
             try {
                 amount = Double.parseDouble(args[args.length - 1]);
             } catch (NumberFormatException ignored) {
-                // amount not provided as a number
+                // last argument wasn't a number, so it's just part of the mention
             }
             if (amount <= 0) amount = 1;
         }
         long userId = target.get();
         db.addSaves(userId, amount);
-        return reply(event, "✅ Gave **" + Format.saves(amount) + "** save(s) to <@" + userId
-                + "> — they now have **" + Format.saves(db.getSaves(userId)) + "/"
+        return reply(event, "Gave **" + Format.saves(amount) + "** save(s) to <@" + userId
+                + ">. They now have **" + Format.saves(db.getSaves(userId)) + "/"
                 + Format.saves(Database.MAX_SAVES) + "**.");
     }
 
-    // ---------- helpers ----------
+    // small helpers
 
     private int page(String[] args) {
         if (args.length == 0) return 1;
