@@ -10,6 +10,7 @@ import com.countingbot.game.MathEvaluator;
 import com.countingbot.util.Format;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.emoji.Emoji;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -117,6 +118,11 @@ public final class CountingListener {
 
         db.advance(guildId, userId, expected);
 
+        // check mark on the correct number
+        Mono<Void> react = message.addReaction(Emoji.unicode("✅"))
+                .onErrorResume(e -> Mono.empty())
+                .then();
+
         StringBuilder text = new StringBuilder();
         if (jokeCounter > 0 && jokeBonus > 0) {
             text.append("<@").append(jokeCounter).append(">'s joke got rated **+")
@@ -136,12 +142,12 @@ public final class CountingListener {
         }
 
         if (text.isEmpty()) {
-            return Mono.empty();
+            return react;
         }
         text.append("Next number is **").append(expected + 1).append("**.");
-        return message.getChannel()
+        return react.then(message.getChannel()
                 .flatMap(ch -> ch.createMessage(text.toString().trim()))
-                .then();
+                .then());
     }
 
     private Mono<Void> fail(MessageCreateEvent event, GuildConfig cfg, long userId, String typed) {
