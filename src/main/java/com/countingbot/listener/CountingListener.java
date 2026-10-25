@@ -89,17 +89,18 @@ public final class CountingListener {
             long lastUserId = cfg.lastUserId() == null ? -1L : cfg.lastUserId();
             int expected = cfg.currentCount() + 1;
 
-            if (lastUserId == userId) {
-                String mention = message.getAuthor().map(User::getMention).orElse("");
-                return message.getChannel()
-                        .flatMap(ch -> ch.createMessage(
-                                mention + " wait for someone else to send " + expected + "."))
-                        .then();
-            }
-
             if (parse.value() == expected) {
+                // right number, but from the same person twice in a row: reject it
+                if (lastUserId == userId) {
+                    String mention = message.getAuthor().map(User::getMention).orElse("");
+                    return message.getChannel()
+                            .flatMap(ch -> ch.createMessage(
+                                    mention + " wait for someone else to send " + expected + "."))
+                            .then();
+                }
                 return success(event, cfg, userId, parse, expected);
             }
+            // wrong number fails the count, even from the last counter
             return fail(event, cfg, userId, parse.wasNumber() ? trimmed : null);
         }
     }
