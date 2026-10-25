@@ -117,9 +117,11 @@ public final class CommandDispatcher {
                 One person can't count two numbers in a row.
 
                 **How points work**
+                • Everyone starts with **10 points**.
                 • Correct number = **+1 point**.
                 • Add something funny (extra text or a maths expression) and everyone rates it 1 to 5, for up to **+5** extra points.
-                • Wrong number = a roast and **-2 points**.
+                • Wrong number = a roast and **-2 points** (points can go below zero).
+                • Drop below **0 points** and you're muted for 5 minutes.
                 • Break the count with no saves left = count resets to **1**.
 
                 **Saves**

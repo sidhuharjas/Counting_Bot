@@ -14,9 +14,9 @@ Everyone counts up together, one number per person, no repeats. A correct number
 - Milestone callouts every 25, 50 and 100
 
 **Points**
-- +1 point for every correct number
+- Everyone starts with 10 points; +1 point for every correct number
 - Funny extra text or a maths expression on the count? Everyone reacts with 1 to 5; the average (rounded) is up to +5 extra points. Ratings can be changed until the next number
-- Wrong number: a random roast (24 of them, like "bad bad beta" and "go eat curry") and -2 points
+- Wrong number: a random roast (24 of them, like "bad bad beta" and "go eat curry") and -2 points. Points can go below zero; crossing below 0 gives a 5 minute Discord timeout
 - Points tracked globally and per server, with run, high score and total leaderboards
 
 **Saves**
@@ -40,7 +40,7 @@ Everyone counts up together, one number per person, no repeats. A correct number
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and make a new application.
 2. Bot tab, add a bot, copy the token.
 3. On the same Bot tab, turn on MESSAGE CONTENT INTENT under Privileged Gateway Intents.
-4. Invite it with the OAuth2 URL generator (`bot` scope; permissions: Send Messages, Embed Links, Add Reactions, Manage Roles if you want failroles).
+4. Invite it with the OAuth2 URL generator (`bot` scope; permissions: Send Messages, Embed Links, Add Reactions, Manage Roles if you want failroles, Moderate Members for the 5 minute timeout).
 
 ### 2. Configure
 ```powershell

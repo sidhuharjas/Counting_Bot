@@ -89,7 +89,9 @@ public final class Database implements AutoCloseable {
     }
 
     private void ensureUser(long userId) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("INSERT OR IGNORE INTO user_global (user_id) VALUES (?)")) {
+        // new players start with 10 points
+        try (PreparedStatement ps = conn.prepareStatement(
+                "INSERT OR IGNORE INTO user_global (user_id, points) VALUES (?, 10)")) {
             ps.setString(1, id(userId));
             ps.executeUpdate();
         }
@@ -232,12 +234,12 @@ public final class Database implements AutoCloseable {
         try {
             if (guildId != null) {
                 ensureUserGuild(userId, guildId);
-                update("UPDATE user_guild SET guild_points = MAX(0, guild_points + ?) "
+                update("UPDATE user_guild SET guild_points = guild_points + ? "
                                 + "WHERE user_id = ? AND guild_id = ?",
                         delta, id(userId), id(guildId));
             }
             ensureUser(userId);
-            update("UPDATE user_global SET points = MAX(0, points + ?) WHERE user_id = ?",
+            update("UPDATE user_global SET points = points + ? WHERE user_id = ?",
                     delta, id(userId));
             if (funny) {
                 update("UPDATE user_global SET funny_points = MAX(0, funny_points + ?) WHERE user_id = ?",

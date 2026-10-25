@@ -8,7 +8,7 @@ public final class Format {
     }
 
     public static String commas(long value) {
-        return String.format(Locale.ROOT, "{:,}", value);
+        return String.format(Locale.ROOT, "%,d", value);
     }
 
     public static String points(double value) {

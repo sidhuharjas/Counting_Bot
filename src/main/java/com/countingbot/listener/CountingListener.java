@@ -14,6 +14,7 @@ import discord4j.core.object.emoji.Emoji;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
+import discord4j.core.spec.GuildMemberEditSpec;
 import discord4j.common.util.Snowflake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,12 +177,18 @@ public final class CountingListener {
             saveLine = "Count reset from **" + at + "**. Next number is **1**.";
         }
 
+        double pointsBefore = db.getUserGlobal(userId).points();
         db.addPoints(userId, guildId, -2, false);
+        double pointsAfter = db.getUserGlobal(userId).points();
+        boolean crossedZero = pointsBefore >= 0 && pointsAfter < 0;
 
         StringBuilder text = new StringBuilder(roast).append('\n').append(saveLine)
                 .append("\n-2 points (you now have **")
-                .append(Format.points(db.getUserGlobal(userId).points()))
+                .append(Format.points(pointsAfter))
                 .append("**).");
+        if (crossedZero) {
+            text.append("\nPoints dropped below 0. You're muted for 5 minutes.");
+        }
         if (reset) {
             text.append("\nUse ").append(config.prefix())
                     .append("save to buy a save with your points so the count survives next time.");
@@ -194,7 +201,20 @@ public final class CountingListener {
         Mono<Void> react = message.addReaction(Emoji.unicode("❌"))
                 .onErrorResume(e -> Mono.empty())
                 .then();
-        return react.and(send).and(applyFailRole(event, cfg));
+        // timeout only the first time they cross 0
+        Mono<Void> mute = crossedZero ? timeout(event) : Mono.empty();
+        return react.and(send).and(mute).and(applyFailRole(event, cfg));
+    }
+
+    private Mono<Void> timeout(MessageCreateEvent event) {
+        return Mono.justOrEmpty(event.getMember())
+                .flatMap(member -> member.edit(GuildMemberEditSpec.create()
+                        .withCommunicationDisabledUntil(java.time.Instant.now().plus(Duration.ofMinutes(5)))))
+                .then()
+                .onErrorResume(e -> {
+                    log.warn("could not timeout member: {}", e.toString());
+                    return Mono.empty();
+                });
     }
 
     private Mono<Void> applyFailRole(MessageCreateEvent event, GuildConfig cfg) {
