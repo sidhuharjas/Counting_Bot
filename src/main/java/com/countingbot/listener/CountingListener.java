@@ -190,7 +190,11 @@ public final class CountingListener {
         Mono<Void> send = message.getChannel()
                 .flatMap(ch -> ch.createMessage(text.toString()))
                 .then();
-        return send.and(applyFailRole(event, cfg));
+        // X on the wrong number
+        Mono<Void> react = message.addReaction(Emoji.unicode("❌"))
+                .onErrorResume(e -> Mono.empty())
+                .then();
+        return react.and(send).and(applyFailRole(event, cfg));
     }
 
     private Mono<Void> applyFailRole(MessageCreateEvent event, GuildConfig cfg) {
